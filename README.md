@@ -18,7 +18,7 @@ Automatically scan your Gmail for FIFO/mechanical fitter job emails and schedule
 Click the **"Fork"** button in the top-right of this GitHub page and clone it locally:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/GmailToCal.git
+git clone https://github.com/ddreelan/GmailToCal.git
 cd GmailToCal
 ```
 ---
@@ -127,20 +127,6 @@ jupyter notebook
 
 ---
 
-## 📬 Example Email to Calendar Event Mapping
-
-If an email subject contains:
-
-> *Shutdown job - BHP - Port Hedland - 14th Sept*
-
-It will create a calendar event titled:
-
-> **Shutdown job - BHP - Port Hedland**
-> Date: **14th September**
-> Duration: **Default 12 hrs** (modifiable in code)
-
----
-
 ## 📜 License
 
 MIT License
@@ -149,4 +135,4 @@ MIT License
 
 ## 🙌 Acknowledgements
 
-Made by Danny Dreelan — inspired by the needs of FIFO workers automating their workflow.
+Made by Danny Dreelan — I did the nerdy bits so the grease monkeys don’t have to. You’re welcome.
