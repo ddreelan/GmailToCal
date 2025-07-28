@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 # Load .env file
 load_dotenv()
 print("CHECKING FOR API TOKENS")
+print("Before GMAIL_API_TOKEN_BASE64:",GMAIL_API_TOKEN_BASE64)
 GMAIL_API_TOKEN_BASE64 = os.getenv("GMAIL_API_TOKEN_BASE64")
 print("GMAIL_API_TOKEN_BASE64:",GMAIL_API_TOKEN_BASE64)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
