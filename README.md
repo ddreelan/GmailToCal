@@ -20,7 +20,7 @@ Click the **"Fork"** button in the top-right of this GitHub page and clone it lo
 ```bash
 git clone https://github.com/YOUR_USERNAME/GmailToCal.git
 cd GmailToCal
-
+```
 ---
 
 ## 🔑 Setup API Keys
