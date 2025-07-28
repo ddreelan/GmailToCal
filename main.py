@@ -1,24 +1,6 @@
-# Test that secrets are being read
-import os
-from dotenv import load_dotenv
-
-# Load .env file
-# load_dotenv()
-print("CHECKING FOR API TOKENS")
-GMAIL_API_TOKEN_BASE64 = os.getenv("GMAIL_API_TOKEN_BASE64")
-print("GMAIL_API_TOKEN_BASE64:",GMAIL_API_TOKEN_BASE64)
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-print("OPENAI_API_KEY:",OPENAI_API_KEY)
-CALENDAR_ID = os.getenv("CALENDAR_ID")
-print("CALENDAR_ID:",CALENDAR_ID)
-print("FINISHED FOR API TOKENS")
 #!/usr/bin/env python
 # coding: utf-8
 
-# Here’s an improved and more polished version of your markdown with clearer structure, consistent tone, and improved readability:
-# 
-# ---
-# 
 # ## 🔧 Gmail Job Scanner Web App for Mechanical Fitter Roles
 # 
 # This Jupyter Notebook automates the end-to-end process of identifying FIFO shutdown job opportunities for mechanical fitters directly from your Gmail inbox.
@@ -67,6 +49,8 @@ print("FINISHED FOR API TOKENS")
 # openai
 # requests
 # python-dotenv
+# bs4
+# pytz
 # ```
 # 
 # You can install all dependencies with:
@@ -214,6 +198,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from dotenv import load_dotenv
 
 # Define the scopes
 SCOPES = [
@@ -221,22 +206,17 @@ SCOPES = [
     'https://www.googleapis.com/auth/calendar'
 ]
 
-# Define the token and credentials file paths
-token_file = "token.json"
-cred_file = "credentials.json"
+# Only load .env if not running in GitHub Actions
+if not os.getenv("GITHUB_ACTIONS"):
+    from dotenv import load_dotenv
+    load_dotenv()
 
-import os
-import json
-import base64
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from google.auth.transport.requests import Request
-from dotenv import load_dotenv
+# Define the token and credentials file paths for if .env doesn't exist
+token_file_name = "token.json"
+cred_file_name = "credentials.json"
 
-# Load .env file
-load_dotenv()
 
-def authenticate_google_services(scopes=SCOPES, token_file="token.json", cred_file="credentials.json"):
+def authenticate_google_services(scopes=SCOPES, token_file=token_file_name, cred_file=cred_file_name):
     creds = None
 
     # Check if the credentials exist in the .env file
@@ -311,7 +291,7 @@ def authenticate_google_services(scopes=SCOPES, token_file="token.json", cred_fi
 #     calendar = build('calendar', 'v3', credentials=creds)
 #     return gmail, calendar
 
-gmail_service, calendar_service = authenticate_google_services(SCOPES)
+# gmail_service, calendar_service = authenticate_google_services(SCOPES)
 
 
 # ## Step 3: Fetch Recent Job-Related Emails
@@ -516,7 +496,6 @@ OPENAI_API_KEY=os.getenv("OPENAI_API_KEY")
 # print(OPENAI_API_KEY)
 
 # Get current date in YYYY-MM-DD
-import time
 current_year = time.gmtime().tm_year 
 current_month = time.gmtime().tm_mon
 current_day = time.gmtime().tm_mday 
