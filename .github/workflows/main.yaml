@@ -5,6 +5,11 @@ on:
     - cron: '30 4 * * *'  # Every day at 00:00 UTC [m h d mh dw]
   workflow_dispatch:       # Optional: allows manual runs from GitHub UI
 
+env:
+  GMAIL_API_TOKEN_BASE64: ${{ secrets.GMAIL_API_TOKEN_BASE64 }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
+
 jobs:
   run-script:
     runs-on: ubuntu-latest
