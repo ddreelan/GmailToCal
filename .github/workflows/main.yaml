@@ -2,9 +2,8 @@ name: Gmail to Calendar Daily
 
 on:
   schedule:
-    - cron: '56 7 * * *'  # Perth is +8 from UTC
-    - cron: '56 6 * * *'  # Perth is +8 from UTC
-    - cron: '56 8 * * *'  # Perth is +8 from UTC
+    # Setting to midnight UTC, to see when it runs
+    - cron: '0 0 * * *'  # Note: Perth is +8 from UTC,
   workflow_dispatch:       # Optional: allows manual runs from GitHub UI
 
 env:
