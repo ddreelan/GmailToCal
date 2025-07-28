@@ -1,27 +1,27 @@
-name: Run Gmail to Calendar
+name: Run Python Script Daily
 
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: '30 4 * * *'  # Every day at 00:00 UTC [m h d mh dw]
+  workflow_dispatch:       # Optional: allows manual runs from GitHub UI
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-    env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      GMAIL_API_TOKEN_BASE64: ${{ secrets.GMAIL_API_TOKEN_BASE64 }}
-      CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
+
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.9
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8.8'  # Choose your Python version
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
 
-    - name: Run script
-      run: |
-        python main.py
+      - name: Run script
+        run: |
+          python main.py
