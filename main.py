@@ -1,3 +1,16 @@
+# Test that secrets are being read
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
+
+GMAIL_API_TOKEN_BASE64 = os.getenv("GMAIL_API_TOKEN_BASE64")
+print("GMAIL_API_TOKEN_BASE64:",GMAIL_API_TOKEN_BASE64)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+print("OPENAI_API_KEY:",OPENAI_API_KEY)
+CALENDAR_ID = os.getenv("CALENDAR_ID")
+print("CALENDAR_ID:",CALENDAR_ID)
+
 #!/usr/bin/env python
 # coding: utf-8
 
