@@ -1,8 +1,8 @@
-name: Run Python Script Daily
+name: Gmail to Calendar Daily
 
 on:
   schedule:
-    - cron: '20 7 * * *'  # Every day at 00:00 UTC [m h d mh dw]
+    - cron: '37 7 * * *'  # Perth is +8 from UTC
   workflow_dispatch:       # Optional: allows manual runs from GitHub UI
 
 env:
