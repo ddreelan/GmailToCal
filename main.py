@@ -172,7 +172,7 @@
 # 
 # ---
 
-# In[ ]:
+# In[1]:
 
 
 from dotenv import load_dotenv
@@ -182,14 +182,14 @@ import os
 GMAIL_API_TOKEN_BASE64 = os.getenv("GMAIL_API_TOKEN_BASE64")
 
 
-# In[ ]:
+# In[2]:
 
 
 # !python -m pip install --upgrade pip
 # !pip install -r requirements.txt
 
 
-# In[ ]:
+# In[3]:
 
 
 import os
@@ -362,7 +362,7 @@ gmail_service, calendar_service = authenticate_google_services(SCOPES)
 # }
 # ```
 
-# In[ ]:
+# In[4]:
 
 
 from bs4 import BeautifulSoup
@@ -494,7 +494,7 @@ def fetch_recent_emails(gmail_service, time_delta_hours=1000, max_results=1000):
 # 
 # ---
 
-# In[ ]:
+# In[5]:
 
 
 # Load API key
@@ -532,7 +532,9 @@ current_date = f'{current_year}-{current_month:02d}-{current_day:02d}'
 # * A job ad, request for availability, or invitation to apply
 # * A confirmed shutdown schedule or a **clear start/end date**
 # 
-# > ⚠️ *Ignore generic rosters unless tied to confirmed dates.*
+# > ⚠️ *Ignore generic rosters and projects longer than 1 month.*
+# 
+# > ⚠️ *Ignore jobs without a start date and an end date.*
 # 
 # ---
 # 
@@ -541,18 +543,18 @@ current_date = f'{current_year}-{current_month:02d}-{current_day:02d}'
 # Each field below must be extracted as a list. Ensure **all lists are the same length**.
 # Duplicate or align values across fields as needed. Use **dummy values** if specific details are missing.
 # 
-# | Field              | Description                                                               |
-# | ------------------ | ------------------------------------------------------------------------- |
-# | `workplace`        | Mine or site names (e.g., "Roy Hill", "FMG Cloudbreak")                   |
-# | `start_date`       | Job start date in `YYYY-MM-DD` format. Use `{current_date}` as reference. |
-# | `end_date`         | Job end date in `YYYY-MM-DD` format                                       |
-# | `day_shift_rate`   | Pay rate for day shift (float, e.g., 655.00)                              |
-# | `night_shift_rate` | Pay rate for night shift (float, e.g., 720.50)                            |
-# | `position`         | Must be either `"Fitter"` or `"Rigger"`                                   |
-# | `clean_shaven`     | `true` if clean-shaven requirement is mentioned, otherwise `false`        |
-# | `client_name`      | Derived from sender’s domain (e.g., `downergroup.com.au` → `downergroup`) |
-# | `contact_number`   | Digits only (no spaces or symbols)                                        |
-# | `email_address`    | Valid contact email(s) from the thread                                    |
+# | Field              | Description                                                                      |
+# | ------------------ | -------------------------------------------------------------------------------- |
+# | `workplace`        | Mine or site names (e.g., "Roy Hill", "FMG Cloudbreak")                          |
+# | `start_date`       | Job start date in `YYYY-MM-DD` format. Use `{current_date}` as reference.        |
+# | `end_date`         | Job end date in `YYYY-MM-DD` format                                              |
+# | `day_shift_rate`   | Pay rate for day shift (float, e.g., 655.00)                                     |
+# | `night_shift_rate` | Pay rate for night shift (float, e.g., 720.50)                                   |
+# | `position`         | Must be either `"Fitter"` or `"Rigger"`                                          |
+# | `clean_shaven`     | `true` if clean-shaven requirement is mentioned, otherwise `false`               |
+# | `client_name`      | Derived from sender’s domain (e.g., `downergroup.com.au` → `downergroup`)        |
+# | `contact_number`   | Digits only (no spaces or symbols). If more than one is present, use the mobile. |           
+# | `email_address`    | Valid contact email(s) from the thread                                           |
 # 
 # ---
 # 
@@ -580,7 +582,7 @@ current_date = f'{current_year}-{current_month:02d}-{current_day:02d}'
 # 
 # ---
 
-# In[ ]:
+# In[6]:
 
 
 PROMPT_INSTRUCTIONS= f"""
@@ -604,6 +606,7 @@ Only return a result if the email includes **at least one** of the following:
 * A confirmed shutdown schedule or a **clear start and end date**
 
 > ⚠️ *Ignore generic rosters and projects longer than 1 month.*
+
 > ⚠️ *Ignore jobs without a start date and an end date.*
 
 ---
@@ -623,7 +626,7 @@ Duplicate or align values across fields as needed. Use **dummy values** if speci
 | `position`         | Must be either `"Fitter"` or `"Rigger"`                                          |
 | `clean_shaven`     | `true` if clean-shaven requirement is mentioned, otherwise `false`               |
 | `client_name`      | Derived from sender’s domain (e.g., `downergroup.com.au` → `downergroup`)        |
-| `contact_number`   | Digits only (no spaces or symbols). If more than one is present, use the mobile. |                                        |
+| `contact_number`   | Digits only (no spaces or symbols). If more than one is present, use the mobile. |
 | `email_address`    | Valid contact email(s) from the thread                                           |
 
 ---
@@ -693,7 +696,7 @@ Return the following JSON object, with **all keys present**, even if empty:
 # """
 
 
-# In[ ]:
+# In[7]:
 
 
 from openai import OpenAI
@@ -789,7 +792,7 @@ def process_emails_for_jobs(emails):
 
 # ## Step 6: Add entries to Google calendar
 
-# In[ ]:
+# In[8]:
 
 
 def list_google_calendars(calendar_service):
@@ -801,7 +804,7 @@ def list_google_calendars(calendar_service):
 # list_google_calendars(calendar_service)
 
 
-# In[ ]:
+# In[9]:
 
 
 def clear_calendar(calendar_service, calendar_id=os.getenv("CALENDAR_ID")):
@@ -834,7 +837,7 @@ def clear_calendar(calendar_service, calendar_id=os.getenv("CALENDAR_ID")):
             break
 
 
-# In[ ]:
+# In[10]:
 
 
 def add_jobs_to_calendar(job_offers, calendar_service, calendar_id=os.getenv("CALENDAR_ID")):
@@ -895,7 +898,7 @@ Phone: tel:{job['contact_number']}
 
 # # Main
 
-# In[ ]:
+# In[11]:
 
 
 def main():
@@ -904,9 +907,9 @@ def main():
     print("\tGOOGLE AUTHENITICATED\n\n")
     
     #- Get job offers from emails
-    num_days = 7
+    num_days = 1
     num_hours = num_days * 24
-    max_emails = 1
+    max_emails = 10000
     emails = fetch_recent_emails(gmail_service, time_delta_hours=num_hours,max_results=max_emails)
     print(f"\t{len(emails)} EMAILS RETRIEVED\n\n")
 
@@ -927,104 +930,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-
-# ## **Setting Up the Program on GitHub**
-# 
-# To set up and run this program on GitHub, follow these steps:
-# 
-# ### Step 1: **Create a GitHub Repository**
-# 
-# 1. Go to [GitHub](https://github.com/) and create a new repository.
-# 2. Clone the repository to your local machine:
-# 
-#    ```bash
-#    git clone https://github.com/ddreelan/GmailToCal.git
-#    cd GmailToCal
-#    ```
-# 
-# ### Step 2: **Create and Add Your Code Files**
-# 
-# 1. Add your program code to the repository. For example:
-# 
-#    * `main.py`: Main program file containing the logic.
-#    * `requirements.txt`: List the required Python dependencies (such as `google-auth`, `openai`, etc.).
-# 
-# 2. Example `requirements.txt`:
-# 
-#    ```
-#    openai
-#    google-auth
-#    google-auth-oauthlib
-#    google-auth-httplib2
-#    ```
-# 
-# 3. Create a `.env` file for storing sensitive information, such as the Google API token (base64-encoded) and OpenAI API key:
-# 
-#    ```
-#    GMAIL_API_TOKEN_BASE64=your_base64_encoded_token_here
-#    OPENAI_API_KEY=your_openai_api_key_here
-#    ```
-# 
-# ### Step 3: **Set Up GitHub Actions for Continuous Integration (Optional)**
-# 
-# You can automate testing and deployment using GitHub Actions.
-# 
-# 1. In your GitHub repository, create a `.github/workflows` directory.
-# 2. Add a workflow YAML file (e.g., `python-app.yml`) to run the code on push or pull request.
-# 
-# Example `.github/workflows/python-app.yml`:
-# 
-# ```yaml
-# name: Python application
-# 
-# on:
-#   push:
-#     branches: [main]
-#   pull_request:
-#     branches: [main]
-# 
-# jobs:
-#   build:
-#     runs-on: ubuntu-latest
-# 
-#     steps:
-#     - name: Check out repository
-#       uses: actions/checkout@v2
-# 
-#     - name: Set up Python
-#       uses: actions/setup-python@v2
-#       with:
-#         python-version: '3.x'
-# 
-#     - name: Install dependencies
-#       run: |
-#         python -m pip install --upgrade pip
-#         pip install -r requirements.txt
-# 
-#     - name: Run the program
-#       run: |
-#         python main.py
-# ```
-# 
-# ### Step 4: **Push Code to GitHub**
-# 
-# Once you’ve added the necessary files and configurations, commit and push the changes to GitHub:
-# 
-# ```bash
-# git add .
-# git commit -m "Add main program and configuration files"
-# git push origin main
-# ```
-# 
-# ### Step 5: **Run the Program**
-# 
-# After pushing the code, GitHub Actions will automatically run the program if it’s set up correctly. You can monitor the results in the **Actions** tab of your GitHub repository.
-# 
-# ---
-# 
-# ## **Conclusion**
-# 
-# This program allows you to automatically extract job opportunities from email threads, leveraging OpenAI’s GPT for processing and Google APIs for handling email and calendar integration. By following the setup steps above, you can host and run the program on GitHub, enabling continuous integration and automation.
-# 
-# Let me know if you need more help!
-# 
