@@ -541,8 +541,8 @@ current_date = f'{current_year}-{current_month:02d}-{current_day:02d}'
 # | `workplace`        | Mine or site names (e.g., "Roy Hill", "FMG Cloudbreak")                          |
 # | `start_date`       | Job start date in `YYYY-MM-DD` format. Use `{current_date}` as reference.        |
 # | `end_date`         | Job end date in `YYYY-MM-DD` format                                              |
-# | `day_shift_rate`   | Pay rate for day shift (float, e.g., 655.00)                                     |
-# | `night_shift_rate` | Pay rate for night shift (float, e.g., 720.50)                                   |
+# | `day_shift_rate`   | Pay rate for day shift (float, e.g., 65.00)                                     |
+# | `night_shift_rate` | Pay rate for night shift (float, e.g., 72.50)                                   |
 # | `position`         | Must be either `"Fitter"` or `"Rigger"`                                          |
 # | `clean_shaven`     | `true` if clean-shaven requirement is mentioned, otherwise `false`               |
 # | `client_name`      | Derived from sender’s domain (e.g., `downergroup.com.au` → `downergroup`)        |
@@ -614,8 +614,8 @@ Duplicate or align values across fields as needed. Use **dummy values** if speci
 | `workplace`        | Mine or site names (e.g., "Roy Hill", "FMG Cloudbreak")                          |
 | `start_date`       | Job start date in `YYYY-MM-DD` format. Use `{current_date}` as reference.        |
 | `end_date`         | Job end date in `YYYY-MM-DD` format                                              |
-| `day_shift_rate`   | Pay rate for day shift (float, e.g., 655.00)                                     |
-| `night_shift_rate` | Pay rate for night shift (float, e.g., 720.50)                                   |
+| `day_shift_rate`   | Pay rate for day shift (float, e.g., 65.00)                                     |
+| `night_shift_rate` | Pay rate for night shift (float, e.g., 72.50)                                   |
 | `position`         | Must be either `"Fitter"` or `"Rigger"`                                          |
 | `clean_shaven`     | `true` if clean-shaven requirement is mentioned, otherwise `false`               |
 | `client_name`      | Derived from sender’s domain (e.g., `downergroup.com.au` → `downergroup`)        |
@@ -771,8 +771,11 @@ def process_emails_for_jobs(emails):
                         'clean_shaven': parsed['clean_shaven'][i],
                         'client_name': parsed['client_name'][i],
                         'contact_number': parsed['contact_number'][i],
-                        'email_address': parsed['email_address'][i],
-                        'email_thread_link': f"https://mail.google.com/mail/u/0/#inbox/{email_obj['thread_id']}"
+                        'email_address': email_obj['sender'],
+                        'thread_id': email_obj['thread_id'],
+                        'email_thread_link': f"https://mail.google.com/mail/u/0/#inbox/{email_obj['thread_id']}",
+                        'received_datetime': email_obj['received_datetime'],
+                        'email_subject': email_obj['subject']
                     })
 
             except Exception as e:
@@ -835,24 +838,34 @@ def clear_calendar(calendar_service, calendar_id=os.getenv("CALENDAR_ID")):
 
 def add_jobs_to_calendar(job_offers, calendar_service, calendar_id=os.getenv("CALENDAR_ID")):
     for job in job_offers:
-        summary = f"{job['workplace']} | ${job['day_shift_rate']}/day & ${job['night_shift_rate']}/night | {job['client_name']}"
+        summary = f"{job['workplace']} | ${job['day_shift_rate']} DS / ${job['night_shift_rate']} NS | {job['client_name']}"
         start_date = job['start_date']
-        end_date = job['end_date']
+        
+#         Google sets the job to end at the start of the end date, so need to add an extra day
+        end_date = job['end_date'] + datetime.timedelta(days=1)
+    
+        # To search for the email on that specific day, I need to search from the day before until the day after
+        search_start_date = job['received_datetime'].date() - datetime.timedelta(days=1)
+        search_end_date = job['received_datetime'].date() + datetime.timedelta(days=1)
 
         # Define the event to insert
         event = {
             'summary': summary,
             'description': f"""
-Link to Email Thread: {job['email_thread_link']}
+Search this in gmail:
+from:{job['email_address']} after:{search_start_date} before:{search_end_date} subject:{job['email_subject']}
 
+Link to email (only works for desktop): {job['email_thread_link']}
+
+Client: {job['client_name']}
 Site: {job['workplace']}
-Day Shift Rate: {job['day_shift_rate']}
-Night Shift Rate: {job['night_shift_rate']}
+Day Shift Rate: {job['day_shift_rate']} /hr
+Night Shift Rate: {job['night_shift_rate']} /hr
 
 Position: {job['position']}
 Clean Shaven: {job['clean_shaven']}
 
-Contact Email: mailto:{job['email_address']}
+Contact Email: {job['email_address']}
 Phone: tel:{job['contact_number']}
 """,
             'start': {
@@ -891,7 +904,7 @@ Phone: tel:{job['contact_number']}
 
 # # Main
 
-# In[11]:
+# In[ ]:
 
 
 def main():
@@ -922,4 +935,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# In[ ]:
+
+
+# gmail_service, calendar_service = authenticate_google_services()
+# clear_calendar(calendar_service)
 
