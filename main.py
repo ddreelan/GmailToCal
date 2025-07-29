@@ -841,12 +841,17 @@ def add_jobs_to_calendar(job_offers, calendar_service, calendar_id=os.getenv("CA
         summary = f"{job['workplace']} | ${job['day_shift_rate']} DS / ${job['night_shift_rate']} NS | {job['client_name']}"
         start_date = job['start_date']
         
-#         Google sets the job to end at the start of the end date, so need to add an extra day
-        end_date = job['end_date'] + timedelta(days=1)
-    
+        # Convert string to datetime.date
+        end_date_obj = datetime.strptime(job['end_date'], "%Y-%m-%d").date()
+        end_date = end_date_obj + timedelta(days=1)         # Add 1 day
+
         # To search for the email on that specific day, I need to search from the day before until the day after
-        search_start_date = job['received_datetime'].date() - timedelta(days=1)
-        search_end_date = job['received_datetime'].date() + timedelta(days=1)
+        # First, parse the string into a datetime object
+        received_dt = datetime.strptime(job['received_datetime'], "%Y-%m-%dT%H:%M:%S")
+
+        # Then get the date and apply timedelta
+        search_start_date = received_dt.date() - timedelta(days=1)
+        search_end_date = received_dt.date() + timedelta(days=1)
 
         # Define the event to insert
         event = {
