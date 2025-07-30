@@ -170,7 +170,7 @@
 # 
 # ---
 
-# In[1]:
+# In[ ]:
 
 
 from dotenv import load_dotenv
@@ -180,14 +180,14 @@ import os
 GMAIL_API_TOKEN_BASE64 = os.getenv("GMAIL_API_TOKEN_BASE64")
 
 
-# In[2]:
+# In[ ]:
 
 
 # !python -m pip install --upgrade pip
 # !pip install -r requirements.txt
 
 
-# In[3]:
+# In[ ]:
 
 
 import os
@@ -356,7 +356,7 @@ def authenticate_google_services(scopes=SCOPES, token_file=token_file_name, cred
 # }
 # ```
 
-# In[4]:
+# In[ ]:
 
 
 from bs4 import BeautifulSoup
@@ -488,7 +488,7 @@ def fetch_recent_emails(gmail_service, time_delta_hours=1000, max_results=1000):
 # 
 # ---
 
-# In[5]:
+# In[ ]:
 
 
 # Load API key
@@ -575,7 +575,7 @@ current_date = f'{current_year}-{current_month:02d}-{current_day:02d}'
 # 
 # ---
 
-# In[6]:
+# In[ ]:
 
 
 PROMPT_INSTRUCTIONS= f"""
@@ -689,7 +689,7 @@ Return the following JSON object, with **all keys present**, even if empty:
 # """
 
 
-# In[7]:
+# In[ ]:
 
 
 from openai import OpenAI
@@ -788,7 +788,7 @@ def process_emails_for_jobs(emails):
 
 # ## Step 6: Add entries to Google calendar
 
-# In[8]:
+# In[ ]:
 
 
 def list_google_calendars(calendar_service):
@@ -800,7 +800,7 @@ def list_google_calendars(calendar_service):
 # list_google_calendars(calendar_service)
 
 
-# In[9]:
+# In[ ]:
 
 
 def clear_calendar(calendar_service, calendar_id=os.getenv("CALENDAR_ID")):
@@ -833,7 +833,7 @@ def clear_calendar(calendar_service, calendar_id=os.getenv("CALENDAR_ID")):
             break
 
 
-# In[10]:
+# In[ ]:
 
 
 def add_jobs_to_calendar(job_offers, calendar_service, calendar_id=os.getenv("CALENDAR_ID")):
@@ -847,7 +847,8 @@ def add_jobs_to_calendar(job_offers, calendar_service, calendar_id=os.getenv("CA
 
         # To search for the email on that specific day, I need to search from the day before until the day after
         # First, parse the string into a datetime object
-        received_dt = datetime.strptime(job['received_datetime'], "%Y-%m-%dT%H:%M:%S")
+        received_str = job['received_datetime'].rsplit(' ', 1)[0]  # removes ' AWST'
+        received_dt = datetime.strptime(received_str, "%Y-%m-%d %H:%M:%S")
 
         # Then get the date and apply timedelta
         search_start_date = received_dt.date() - timedelta(days=1)
