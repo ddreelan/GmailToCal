@@ -841,9 +841,9 @@ def add_jobs_to_calendar(job_offers, calendar_service, calendar_id=os.getenv("CA
         summary = f"{job['workplace']} | ${job['day_shift_rate']} DS / ${job['night_shift_rate']} NS | {job['client_name']}"
         start_date = job['start_date']
         
-        # Convert string to datetime.date
-        end_date_obj = datetime.strptime(job['end_date'], "%Y-%m-%d").date()
-        end_date = end_date_obj + timedelta(days=1)         # Add 1 day
+        # Add 1 day to the end date, as event ends at 00:00 of the end date
+        end_date_obj = datetime.strptime(job['end_date'], "%Y-%m-%d").date() + timedelta(days=1)
+        end_date = end_date_obj.strftime("%Y-%m-%d")  # convert back to string
 
         # To search for the email on that specific day, I need to search from the day before until the day after
         # First, parse the string into a datetime object
@@ -872,7 +872,7 @@ Position: {job['position']}
 Clean Shaven: {job['clean_shaven']}
 
 Contact Email: {job['email_address']}
-Phone: tel:{job['contact_number']}
+Phone: {job['contact_number']}
 """,
             'start': {
                 'date': start_date,
@@ -909,6 +909,12 @@ Phone: tel:{job['contact_number']}
 
 
 # # Main
+# This is the function that is run online by scheduling.
+# 
+# To make this function runable, run the following command:
+# ```bash
+# jupyter nbconvert --to script GmailToCalendar.ipynb --output main
+# ```
 
 # In[ ]:
 
@@ -919,7 +925,7 @@ def main():
     print("\tGOOGLE AUTHENITICATED\n\n")
     
     #- Get job offers from emails
-    num_days = 1
+    num_days = 7
     num_hours = num_days * 24
     max_emails = 10000
     emails = fetch_recent_emails(gmail_service, time_delta_hours=num_hours,max_results=max_emails)
@@ -943,9 +949,65 @@ if __name__ == "__main__":
     main()
 
 
+# # Testing
+
+# In[ ]:
+
+
+#- Get access to gmail and calendar
+gmail_service, calendar_service = authenticate_google_services()
+print("\tGOOGLE AUTHENITICATED\n\n")
+
+
+# In[ ]:
+
+
+#- Get job offers from emails
+num_days = 1
+num_hours = num_days * 24
+# max_emails = 10000
+max_emails = 1
+emails = fetch_recent_emails(gmail_service, time_delta_hours=num_hours,max_results=max_emails)
+print(f"\t{len(emails)} EMAILS RETRIEVED\n\n")
+
+
+# In[ ]:
+
+
+print(emails[0])
+
+
+# In[ ]:
+
+
+#- Pass the emails to GPT to extract job information
+job_offers = process_emails_for_jobs(emails)
+print(f"\t{len(job_offers)} JOB OFFERS EXTRACTED\n\n")
+
+
+# In[ ]:
+
+
+for job in job_offers:
+#     print(json.dumps(job,indent=4))
+    print(job)
+
+
+# In[ ]:
+
+
+#- Create calendar entries for each job 
+CALENDAR_ID=os.getenv("CALENDAR_ID")
+print("CALENDAR_ID", CALENDAR_ID)
+# Optionally clear the calendar of all entries for testing
+#     clear_calendar(calendar_service)
+
+
 # In[ ]:
 
 
 # gmail_service, calendar_service = authenticate_google_services()
 # clear_calendar(calendar_service)
+add_jobs_to_calendar(job_offers,calendar_service)
+print("CALENDAR ENTRIES ADDED\n\n")
 
