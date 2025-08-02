@@ -83,7 +83,7 @@
 
 # ## 🔐 Step 2: Authenticate to Gmail and Google Calendar
 # 
-# To access Gmail and Google Calendar via the Google APIs, you need to authenticate using **OAuth 2.0**. This allows the app to read emails and create calendar events on your behalf securely.
+# To access Gmail, Google Calendar and Sheets via the Google APIs, you need to authenticate using **OAuth 2.0**. This allows the app to read emails and create calendar events on your behalf securely.
 # 
 # There are **two modes of authentication** depending on your environment:
 # 
@@ -97,7 +97,7 @@
 # 
 #    * Go to the [Google Cloud Console](https://console.cloud.google.com/apis/dashboard).
 #    * Create a new project (or select an existing one).
-#    * Enable both the **Gmail API** and **Google Calendar API**.
+#    * Enable both the **Gmail API**, **Google Calendar API** and **Google Sheets API**
 # 
 # 2. **Create OAuth Credentials:**
 # 
@@ -124,7 +124,7 @@
 # #### ✅ How to Generate the Token:
 # 
 # 1. Complete the steps above in **Local Mode** to create a valid `token.json`.
-# 2. Base64-encode the file:
+# 2. Base64-encode the file (use the `-i` flag on MacOS):
 # 
 #    ```bash
 #    base64 token.json > token.json.base64
@@ -167,10 +167,11 @@
 # 
 # * A `gmail` service to search for job-related emails.
 # * A `calendar` service to insert calendar events.
+# * A `sheets` service to add jobs to a spreadsheet.
 # 
 # ---
 
-# In[ ]:
+# In[60]:
 
 
 from dotenv import load_dotenv
@@ -180,14 +181,14 @@ import os
 GMAIL_API_TOKEN_BASE64 = os.getenv("GMAIL_API_TOKEN_BASE64")
 
 
-# In[ ]:
+# In[61]:
 
 
 # !python -m pip install --upgrade pip
 # !pip install -r requirements.txt
 
 
-# In[ ]:
+# In[62]:
 
 
 import os
@@ -203,7 +204,8 @@ from dotenv import load_dotenv
 # Define the scopes
 SCOPES = [
     'https://www.googleapis.com/auth/gmail.readonly',
-    'https://www.googleapis.com/auth/calendar'
+    'https://www.googleapis.com/auth/calendar',
+    "https://www.googleapis.com/auth/spreadsheets"
 ]
 
 # Only load .env if not running in GitHub Actions
@@ -243,11 +245,21 @@ def authenticate_google_services(scopes=SCOPES, token_file=token_file_name, cred
                 creds.refresh(Request())
             else:
                 print("[INFO] Starting OAuth flow for local user.")
-                from google_auth_oauthlib.flow import InstalledAppFlow
                 flow = InstalledAppFlow.from_client_secrets_file(cred_file, scopes)
                 creds = flow.run_local_server(port=0)
             with open(token_file, 'w') as token:
                 token.write(creds.to_json())
+
+    # Local environment: Check if credential file exists (this is needed for init)
+    elif os.path.exists(cred_file):
+        print(f"[INFO] Running locally. First time using {cred_file}.")
+
+        flow = InstalledAppFlow.from_client_secrets_file(cred_file, SCOPES)
+        creds = flow.run_local_server(port=0)
+
+        # Save token.json for future use
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())        
 
     else:
         raise RuntimeError("No valid authentication method found.")
@@ -255,43 +267,10 @@ def authenticate_google_services(scopes=SCOPES, token_file=token_file_name, cred
     # Build the service clients
     gmail = build('gmail', 'v1', credentials=creds)
     calendar = build('calendar', 'v3', credentials=creds)
-    return gmail, calendar
+    sheets = build('sheets', 'v4', credentials=creds)
+    return gmail, calendar, sheets
 
-# def authenticate_google_services(scopes=SCOPES):
-#     creds = None
-
-#     # Check if running in GitHub Actions or another CI environment
-#     if os.getenv("GITHUB_ACTIONS") == "true":
-#         print("[INFO] Running in GitHub Actions. Loading credentials from env variable.")
-#         token_json_str = base64.b64decode(os.getenv("GMAIL_API_TOKEN_BASE64")).decode('utf-8')
-#         creds_dict = json.loads(token_json_str)
-#         creds = Credentials.from_authorized_user_info(info=creds_dict, scopes=scopes)
-
-#     # Local environment
-#     elif os.path.exists(token_file):
-#         print("[INFO] Running locally. Loading token from",token_file)
-#         creds = Credentials.from_authorized_user_file(token_file, scopes)
-
-#         if not creds or not creds.valid:
-#             if creds and creds.expired and creds.refresh_token:
-#                 creds.refresh(Request())
-#             else:
-#                 print("[INFO] Starting OAuth flow for local user.")
-#                 from google_auth_oauthlib.flow import InstalledAppFlow
-#                 flow = InstalledAppFlow.from_client_secrets_file(cred_file, scopes)
-#                 creds = flow.run_local_server(port=0)
-#             with open(token_file, 'w') as token:
-#                 token.write(creds.to_json())
-
-#     else:
-#         raise RuntimeError("No valid authentication method found.")
-
-#     # Build the service clients
-#     gmail = build('gmail', 'v1', credentials=creds)
-#     calendar = build('calendar', 'v3', credentials=creds)
-#     return gmail, calendar
-
-# gmail_service, calendar_service = authenticate_google_services(SCOPES)
+# gmail_service, calendar_service, sheets_service = authenticate_google_services(SCOPES)
 
 
 # ## Step 3: Fetch Recent Job-Related Emails
@@ -356,7 +335,7 @@ def authenticate_google_services(scopes=SCOPES, token_file=token_file_name, cred
 # }
 # ```
 
-# In[ ]:
+# In[63]:
 
 
 from bs4 import BeautifulSoup
@@ -488,7 +467,7 @@ def fetch_recent_emails(gmail_service, time_delta_hours=1000, max_results=1000):
 # 
 # ---
 
-# In[ ]:
+# In[64]:
 
 
 # Load API key
@@ -539,14 +518,14 @@ current_date = f'{current_year}-{current_month:02d}-{current_day:02d}'
 # | Field              | Description                                                                      |
 # | ------------------ | -------------------------------------------------------------------------------- |
 # | `workplace`        | Mine or site names (e.g., "Roy Hill", "FMG Cloudbreak")                          |
-# | `start_date`       | Job start date in `YYYY-MM-DD` format. Use `{current_date}` as reference.        |
-# | `end_date`         | Job end date in `YYYY-MM-DD` format                                              |
+# | `start_date`       | Job start date in `YYYY-MM-DD` format. Use `{current_date}` as reference. Include travel days. |
+# | `end_date`         | Job end date in `YYYY-MM-DD` format. Include travel days.                        |
 # | `day_shift_rate`   | Pay rate for day shift (float, e.g., 65.00)                                     |
 # | `night_shift_rate` | Pay rate for night shift (float, e.g., 72.50)                                   |
 # | `position`         | Must be either `"Fitter"` or `"Rigger"`                                          |
 # | `clean_shaven`     | `true` if clean-shaven requirement is mentioned, otherwise `false`               |
 # | `client_name`      | Derived from sender’s domain (e.g., `downergroup.com.au` → `downergroup`)        |
-# | `contact_number`   | Digits only (no spaces or symbols). If more than one is present, use the mobile. |           
+# | `contact_number`   | Digits only (no spaces or symbols). If more than one is present, use the mobile. |
 # | `email_address`    | Valid contact email(s) from the thread                                           |
 # 
 # ---
@@ -575,7 +554,7 @@ current_date = f'{current_year}-{current_month:02d}-{current_day:02d}'
 # 
 # ---
 
-# In[ ]:
+# In[65]:
 
 
 PROMPT_INSTRUCTIONS= f"""
@@ -612,8 +591,8 @@ Duplicate or align values across fields as needed. Use **dummy values** if speci
 | Field              | Description                                                                      |
 | ------------------ | -------------------------------------------------------------------------------- |
 | `workplace`        | Mine or site names (e.g., "Roy Hill", "FMG Cloudbreak")                          |
-| `start_date`       | Job start date in `YYYY-MM-DD` format. Use `{current_date}` as reference.        |
-| `end_date`         | Job end date in `YYYY-MM-DD` format                                              |
+| `start_date`       | Job start date in `YYYY-MM-DD` format. Use `{current_date}` as reference. Include travel days. |
+| `end_date`         | Job end date in `YYYY-MM-DD` format. Include travel days.                        |
 | `day_shift_rate`   | Pay rate for day shift (float, e.g., 65.00)                                     |
 | `night_shift_rate` | Pay rate for night shift (float, e.g., 72.50)                                   |
 | `position`         | Must be either `"Fitter"` or `"Rigger"`                                          |
@@ -689,7 +668,7 @@ Return the following JSON object, with **all keys present**, even if empty:
 # """
 
 
-# In[ ]:
+# In[66]:
 
 
 from openai import OpenAI
@@ -788,7 +767,7 @@ def process_emails_for_jobs(emails):
 
 # ## Step 6: Add entries to Google calendar
 
-# In[ ]:
+# In[67]:
 
 
 def list_google_calendars(calendar_service):
@@ -800,10 +779,10 @@ def list_google_calendars(calendar_service):
 # list_google_calendars(calendar_service)
 
 
-# In[ ]:
+# In[68]:
 
 
-def clear_calendar(calendar_service, calendar_id=os.getenv("CALENDAR_ID")):
+def clear_calendar(calendar_service, calendar_id=os.getenv("SHUTS_CALENDAR_ID")):
     page_token = None
     while True:
         events = calendar_service.events().list(
@@ -833,22 +812,73 @@ def clear_calendar(calendar_service, calendar_id=os.getenv("CALENDAR_ID")):
             break
 
 
-# In[ ]:
+# In[69]:
 
 
-def add_jobs_to_calendar(job_offers, calendar_service, calendar_id=os.getenv("CALENDAR_ID")):
+from datetime import datetime, timedelta
+
+def is_calendar_free(calendar_service, calendar_id, start_date_str, end_date_str):
+    """
+    Checks if the calendar has any events between start_date and end_date.
+
+    Args:
+        calendar_service: Google Calendar API service instance
+        calendar_id (str): Calendar ID (e.g., 'primary' or a shared calendar ID)
+        start_date_str (str): Start date in "YYYY-MM-DD" format
+        end_date_str (str): End date in "YYYY-MM-DD" format
+
+    Returns:
+        bool: True if calendar is free during that period, False if there are events
+    """
+    try:
+        # Convert to datetime objects
+        start_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date_str, "%Y-%m-%d") + timedelta(days=1)  # inclusive
+
+        # Format as RFC3339 timestamps with timezone
+        time_min = start_dt.isoformat() + "+08:00"  # Perth timezone
+        time_max = end_dt.isoformat() + "+08:00"
+
+        events_result = calendar_service.events().list(
+            calendarId=calendar_id,
+            timeMin=time_min,
+            timeMax=time_max,
+            singleEvents=True,
+            orderBy="startTime"
+        ).execute()
+
+        events = events_result.get("items", [])
+        return len(events) == 0  # True if no events found
+
+    except Exception as e:
+        print(f"[ERROR] Failed to check calendar availability: {e}")
+        return False
+
+
+# In[70]:
+
+
+def add_jobs_to_calendar(job_offers, calendar_service, calendar_id=os.getenv("SHUTS_CALENDAR_ID")):
     for job in job_offers:
         summary = f"{job['workplace']} | ${job['day_shift_rate']} DS / ${job['night_shift_rate']} NS | {job['client_name']}"
         start_date = job['start_date']
         
+        print("end date before addition:",job['end_date'])
         # Add 1 day to the end date, as event ends at 00:00 of the end date
         end_date_obj = datetime.strptime(job['end_date'], "%Y-%m-%d").date() + timedelta(days=1)
         end_date = end_date_obj.strftime("%Y-%m-%d")  # convert back to string
-
+        print("end date AFTER addition:",end_date)
         # To search for the email on that specific day, I need to search from the day before until the day after
         # First, parse the string into a datetime object
         received_str = job['received_datetime'].rsplit(' ', 1)[0]  # removes ' AWST'
         received_dt = datetime.strptime(received_str, "%Y-%m-%d %H:%M:%S")
+        
+        # Check if I am free for those dates
+        event_colour = "5" # Set banana as default
+        if(is_calendar_free(calendar_service,"primary",start_date,end_date)):
+            event_colour = "2" # Sage (light green)
+        else:
+            event_colour = "4" # Flamingo (light red)
 
         # Then get the date and apply timedelta
         search_start_date = received_dt.date() - timedelta(days=1)
@@ -883,7 +913,8 @@ Phone: {job['contact_number']}
                 'timeZone': 'Australia/Perth',
             },
             'event_type': 'workingLocation',
-            'location': f"{job['workplace']}"
+            'location': f"{job['workplace']}",
+            'colorId': event_colour
         }
 
         try:
@@ -902,10 +933,179 @@ Phone: {job['contact_number']}
 
             # Insert new event
             event_result = calendar_service.events().insert(calendarId=calendar_id, body=event).execute()
-            print("Calendar entry added:", summary, event_result.get('htmlLink'))
+            print("Calendar entry added:", summary, start_date, "to",end_date, event_result.get('htmlLink'))
 
         except Exception as e:
             print("Failed to add calendar entry:", e)
+
+
+# ## Step 7: Add jobs to Google sheet
+
+# In[71]:
+
+
+# The sheet/tab name to initialise
+SHEET_NAME = "Jobs"
+
+# Your desired column headers
+HEADERS = [
+    "Workplace",
+    "Start Date",
+    "End Date",
+    "Day Shift Rate",
+    "Night Shift Rate",
+    "Position",
+    "Clean Shaven",
+    "Client Name",
+    "Contact Number",
+    "Email Address",
+    "Email Subject",
+    "Thread ID",
+    "Email Thread Link",
+    "Received DateTime"
+]
+
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+def initialise_spreadsheet(sheets_service, spreadsheet_id=SPREADSHEET_ID, SHEET_NAME="Jobs"):
+
+    try:
+        # 1️⃣ Try to create a "Jobs" sheet (will fail if it already exists)
+        try:
+            requests = [{
+                "addSheet": {
+                    "properties": {"title": SHEET_NAME}
+                }
+            }]
+            sheets_service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={"requests": requests}
+            ).execute()
+            print(f"[INFO] Created new sheet tab: {SHEET_NAME}")
+        except HttpError as e:
+            if "already exists" in str(e):
+                print(f"[INFO] Sheet tab '{SHEET_NAME}' already exists, will overwrite headers.")
+            else:
+                raise
+
+        # 2️⃣ Clear existing values in the sheet
+        sheets_service.spreadsheets().values().clear(
+            spreadsheetId=spreadsheet_id,
+            range=SHEET_NAME
+        ).execute()
+        print("[INFO] Cleared existing values.")
+
+        # 3️⃣ Write the headers
+        sheets_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            range=f"{SHEET_NAME}!A1",
+            valueInputOption="USER_ENTERED",
+            body={"values": [HEADERS]}
+        ).execute()
+        print("[INFO] Wrote header row.")
+
+        print(f"✅ Spreadsheet initialised: https://docs.google.com/spreadsheets/d/{spreadsheet_id}")
+
+    except HttpError as err:
+        print(f"[ERROR] Failed to initialise spreadsheet: {err}")
+        
+def is_sheet_empty(sheets_service, spreadsheet_id, sheet_name):
+    try:
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range=sheet_name
+        ).execute()
+
+        values = result.get("values", [])
+
+        # If no values, it's empty
+        if not values:
+            return True
+        # If there's only one row and it's all empty strings
+        if len(values) == 1 and all(cell == "" for cell in values[0]):
+            return True
+
+        return False
+
+    except Exception as e:
+        print(f"[ERROR] Failed to check if sheet is empty: {e}")
+        return False
+
+
+# In[72]:
+
+
+def add_jobs_to_sheet(job_offers, sheets_service, spreadsheet_id, sheet_name="Jobs"):
+    """
+    Append job offers to a Google Sheet.
+
+    Args:
+        job_offers (list): List of dicts containing job details.
+        sheets_service: Authorized Google Sheets API service instance.
+        spreadsheet_id (str): The ID of the Google Sheet.
+        sheet_name (str): Name of the sheet/tab to append data to.
+    """
+    
+    # Initialise the sheet if it is empty:
+    if(is_sheet_empty(sheets_service, spreadsheet_id, sheet_name)):
+        initialise_spreadsheet(sheets_service, spreadsheet_id, sheet_name)
+
+    
+    # Prepare rows for appending
+    values = []
+    for job in job_offers:
+        values.append([
+            job.get('workplace', ''),
+            job.get('start_date', ''),
+            job.get('end_date', ''),
+            job.get('day_shift_rate', ''),
+            job.get('night_shift_rate', ''),
+            job.get('position', ''),
+            job.get('clean_shaven', ''),
+            job.get('client_name', ''),
+            job.get('contact_number', ''),
+            job.get('email_address', ''),
+            job.get('email_subject', ''),
+            job.get('email_thread_link', ''),
+            job.get('received_datetime', '')
+        ])
+
+    body = {
+        'values': values
+    }
+
+    try:
+        # Append data to the Google Sheet
+        result = sheets_service.spreadsheets().values().append(
+            spreadsheetId=spreadsheet_id,
+            range=f"{sheet_name}!A1",  # Append starting at first column
+            valueInputOption="USER_ENTERED",
+            insertDataOption="INSERT_ROWS",
+            body=body
+        ).execute()
+
+        print(f"{result.get('updates').get('updatedRows')} rows added to Google Sheet.")
+    
+    except Exception as e:
+        print("Failed to add jobs to sheet:", e)
+
+
+# In[73]:
+
+
+# initialise_spreadsheet(sheets_service, SPREADSHEET_ID,"Jobs")
+
+
+# In[74]:
+
+
+# Your spreadsheet ID (from Google Sheet URL)
+# SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+# print(SPREADSHEET_ID)
+
+# # Call the function
+# add_jobs_to_sheet(job_offers, sheets_service, SPREADSHEET_ID, sheet_name="Jobs")
 
 
 # # Main
@@ -916,12 +1116,12 @@ Phone: {job['contact_number']}
 # jupyter nbconvert --to script GmailToCalendar.ipynb --output main
 # ```
 
-# In[ ]:
+# In[54]:
 
 
 def main():
     #- Get access to gmail and calendar
-    gmail_service, calendar_service = authenticate_google_services()
+    gmail_service, calendar_service, sheets_service = authenticate_google_services()
     print("\tGOOGLE AUTHENITICATED\n\n")
     
     #- Get job offers from emails
@@ -936,12 +1136,16 @@ def main():
     print(f"\t{len(job_offers)} JOB OFFERS EXTRACTED\n\n")
     
     #- Create calendar entries for each job 
-    CALENDAR_ID=os.getenv("CALENDAR_ID")
-    print("CALENDAR_ID", CALENDAR_ID)
+    SHUTS_CALENDAR_ID=os.getenv("SHUTS_CALENDAR_ID")
+    print("SHUTS_CALENDAR_ID", SHUTS_CALENDAR_ID)
     # Optionally clear the calendar of all entries for testing
 #     clear_calendar(calendar_service)
     add_jobs_to_calendar(job_offers,calendar_service)
     print("CALENDAR ENTRIES ADDED\n\n")
+    
+    #- Add jobs to a Google Sheet spreadsheet
+    SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+    add_jobs_to_sheet(job_offers, sheets_service, SPREADSHEET_ID, sheet_name="Jobs")
     
     pass
 
@@ -951,22 +1155,22 @@ if __name__ == "__main__":
 
 # # Testing
 
-# In[ ]:
+# In[75]:
 
 
 #- Get access to gmail and calendar
-gmail_service, calendar_service = authenticate_google_services()
+gmail_service, calendar_service, sheets_service = authenticate_google_services()
 print("\tGOOGLE AUTHENITICATED\n\n")
 
 
-# In[ ]:
+# In[76]:
 
 
 #- Get job offers from emails
-num_days = 1
+num_days = 0.1
 num_hours = num_days * 24
-# max_emails = 10000
-max_emails = 1
+max_emails = 10000
+# max_emails = 1
 emails = fetch_recent_emails(gmail_service, time_delta_hours=num_hours,max_results=max_emails)
 print(f"\t{len(emails)} EMAILS RETRIEVED\n\n")
 
@@ -977,7 +1181,7 @@ print(f"\t{len(emails)} EMAILS RETRIEVED\n\n")
 print(emails[0])
 
 
-# In[ ]:
+# In[77]:
 
 
 #- Pass the emails to GPT to extract job information
@@ -985,7 +1189,7 @@ job_offers = process_emails_for_jobs(emails)
 print(f"\t{len(job_offers)} JOB OFFERS EXTRACTED\n\n")
 
 
-# In[ ]:
+# In[78]:
 
 
 for job in job_offers:
@@ -993,21 +1197,82 @@ for job in job_offers:
     print(job)
 
 
-# In[ ]:
+# In[79]:
 
 
 #- Create calendar entries for each job 
-CALENDAR_ID=os.getenv("CALENDAR_ID")
-print("CALENDAR_ID", CALENDAR_ID)
+SHUTS_CALENDAR_ID=os.getenv("SHUTS_CALENDAR_ID")
+print("SHUTS_CALENDAR_ID", SHUTS_CALENDAR_ID)
 # Optionally clear the calendar of all entries for testing
 #     clear_calendar(calendar_service)
 
 
+# In[81]:
+
+
+gmail_service, calendar_service, sheets_service = authenticate_google_services()
+clear_calendar(calendar_service)
+
+
+# In[82]:
+
+
+add_jobs_to_calendar(job_offers,calendar_service)
+print("CALENDAR ENTRIES ADDED\n\n")
+
+
 # In[ ]:
 
 
-# gmail_service, calendar_service = authenticate_google_services()
-# clear_calendar(calendar_service)
-add_jobs_to_calendar(job_offers,calendar_service)
+job = job_offers[0]
+
+# print(job)
+print(job['end_date'])
+
+# Add 1 day to the end date, as event ends at 00:00 of the end date
+end_date_obj = datetime.strptime(job['end_date'], "%Y-%m-%d").date() + timedelta(days=1)
+end_date = end_date_obj.strftime("%Y-%m-%d")  # convert back to string
+
+print(end_date)
+
+
+# In[ ]:
+
+
+clear_calendar(calendar_service)
+
+
+# In[87]:
+
+
+job_offers_test = []
+job_offers_test.append(job_offers[0])
+
+job_offers_test[0]['start_date'] = "2025-08-04"
+# print(job_offers_test[0]['start_date'])
+
+job_offers_test[0]['end_date'] = "2025-08-05"
+# print(job_offers_test[0]['end_date'])
+# # print(job_offers_test)
+
+
+# In[88]:
+
+
+add_jobs_to_calendar(job_offers_test,calendar_service)
 print("CALENDAR ENTRIES ADDED\n\n")
+
+
+# In[ ]:
+
+
+# Extract specific email for testing
+email
+for email in emails:
+    print(email['thread_id'])
+    if email['thread_id'] == "YzE4aDd0dXI5c3NndWtxN2Y4cjR2N2RpNWcgNWE0OWRiMDdmNzFkMGU5YmIwNDU3MmYzNTk2MTM4ZDUxYWE5NDg1Y2ExYjg2ZTg4NDQzYTkwNDJmOGEyMWU5ZUBn":
+        print(email)
+        email_test = email
+        pass
+# print(email_test)
 
