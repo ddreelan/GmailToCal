@@ -171,7 +171,7 @@
 # 
 # ---
 
-# In[60]:
+# In[ ]:
 
 
 from dotenv import load_dotenv
@@ -181,14 +181,14 @@ import os
 GMAIL_API_TOKEN_BASE64 = os.getenv("GMAIL_API_TOKEN_BASE64")
 
 
-# In[61]:
+# In[ ]:
 
 
 # !python -m pip install --upgrade pip
 # !pip install -r requirements.txt
 
 
-# In[62]:
+# In[ ]:
 
 
 import os
@@ -335,7 +335,7 @@ def authenticate_google_services(scopes=SCOPES, token_file=token_file_name, cred
 # }
 # ```
 
-# In[63]:
+# In[ ]:
 
 
 from bs4 import BeautifulSoup
@@ -467,7 +467,7 @@ def fetch_recent_emails(gmail_service, time_delta_hours=1000, max_results=1000):
 # 
 # ---
 
-# In[64]:
+# In[ ]:
 
 
 # Load API key
@@ -554,7 +554,7 @@ current_date = f'{current_year}-{current_month:02d}-{current_day:02d}'
 # 
 # ---
 
-# In[65]:
+# In[ ]:
 
 
 PROMPT_INSTRUCTIONS= f"""
@@ -668,7 +668,7 @@ Return the following JSON object, with **all keys present**, even if empty:
 # """
 
 
-# In[66]:
+# In[ ]:
 
 
 from openai import OpenAI
@@ -767,7 +767,7 @@ def process_emails_for_jobs(emails):
 
 # ## Step 6: Add entries to Google calendar
 
-# In[67]:
+# In[ ]:
 
 
 def list_google_calendars(calendar_service):
@@ -779,7 +779,7 @@ def list_google_calendars(calendar_service):
 # list_google_calendars(calendar_service)
 
 
-# In[68]:
+# In[ ]:
 
 
 def clear_calendar(calendar_service, calendar_id=os.getenv("SHUTS_CALENDAR_ID")):
@@ -812,7 +812,7 @@ def clear_calendar(calendar_service, calendar_id=os.getenv("SHUTS_CALENDAR_ID"))
             break
 
 
-# In[69]:
+# In[ ]:
 
 
 from datetime import datetime, timedelta
@@ -855,7 +855,7 @@ def is_calendar_free(calendar_service, calendar_id, start_date_str, end_date_str
         return False
 
 
-# In[70]:
+# In[ ]:
 
 
 def add_jobs_to_calendar(job_offers, calendar_service, calendar_id=os.getenv("SHUTS_CALENDAR_ID")):
@@ -941,11 +941,13 @@ Phone: {job['contact_number']}
 
 # ## Step 7: Add jobs to Google sheet
 
-# In[71]:
+# In[ ]:
 
 
 # The sheet/tab name to initialise
 SHEET_NAME = "Jobs"
+
+SPREADSHEET_ID=os.getenv("SPREADSHEET_ID")
 
 # Your desired column headers
 HEADERS = [
@@ -1033,7 +1035,7 @@ def is_sheet_empty(sheets_service, spreadsheet_id, sheet_name):
         return False
 
 
-# In[72]:
+# In[ ]:
 
 
 def add_jobs_to_sheet(job_offers, sheets_service, spreadsheet_id, sheet_name="Jobs"):
@@ -1091,13 +1093,13 @@ def add_jobs_to_sheet(job_offers, sheets_service, spreadsheet_id, sheet_name="Jo
         print("Failed to add jobs to sheet:", e)
 
 
-# In[73]:
+# In[ ]:
 
 
 # initialise_spreadsheet(sheets_service, SPREADSHEET_ID,"Jobs")
 
 
-# In[74]:
+# In[ ]:
 
 
 # Your spreadsheet ID (from Google Sheet URL)
@@ -1116,7 +1118,7 @@ def add_jobs_to_sheet(job_offers, sheets_service, spreadsheet_id, sheet_name="Jo
 # jupyter nbconvert --to script GmailToCalendar.ipynb --output main
 # ```
 
-# In[54]:
+# In[ ]:
 
 
 def main():
@@ -1155,7 +1157,7 @@ if __name__ == "__main__":
 
 # # Testing
 
-# In[75]:
+# In[ ]:
 
 
 #- Get access to gmail and calendar
@@ -1163,7 +1165,7 @@ gmail_service, calendar_service, sheets_service = authenticate_google_services()
 print("\tGOOGLE AUTHENITICATED\n\n")
 
 
-# In[76]:
+# In[ ]:
 
 
 #- Get job offers from emails
@@ -1181,7 +1183,7 @@ print(f"\t{len(emails)} EMAILS RETRIEVED\n\n")
 print(emails[0])
 
 
-# In[77]:
+# In[ ]:
 
 
 #- Pass the emails to GPT to extract job information
@@ -1189,7 +1191,7 @@ job_offers = process_emails_for_jobs(emails)
 print(f"\t{len(job_offers)} JOB OFFERS EXTRACTED\n\n")
 
 
-# In[78]:
+# In[ ]:
 
 
 for job in job_offers:
@@ -1197,7 +1199,7 @@ for job in job_offers:
     print(job)
 
 
-# In[79]:
+# In[ ]:
 
 
 #- Create calendar entries for each job 
@@ -1207,14 +1209,14 @@ print("SHUTS_CALENDAR_ID", SHUTS_CALENDAR_ID)
 #     clear_calendar(calendar_service)
 
 
-# In[81]:
+# In[ ]:
 
 
 gmail_service, calendar_service, sheets_service = authenticate_google_services()
 clear_calendar(calendar_service)
 
 
-# In[82]:
+# In[ ]:
 
 
 add_jobs_to_calendar(job_offers,calendar_service)
@@ -1242,7 +1244,7 @@ print(end_date)
 clear_calendar(calendar_service)
 
 
-# In[87]:
+# In[ ]:
 
 
 job_offers_test = []
@@ -1256,7 +1258,7 @@ job_offers_test[0]['end_date'] = "2025-08-05"
 # # print(job_offers_test)
 
 
-# In[88]:
+# In[ ]:
 
 
 add_jobs_to_calendar(job_offers_test,calendar_service)
