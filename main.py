@@ -1125,7 +1125,7 @@ def main():
     print("\tGOOGLE AUTHENITICATED\n\n")
     
     #- Get job offers from emails
-    num_days = 7
+    num_days = 1
     num_hours = num_days * 24
     max_emails = 10000
     emails = fetch_recent_emails(gmail_service, time_delta_hours=num_hours,max_results=max_emails)
