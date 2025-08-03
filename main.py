@@ -1155,126 +1155,126 @@ if __name__ == "__main__":
     main()
 
 
-# # Testing
+# # # Testing
 
-# In[ ]:
-
-
-#- Get access to gmail and calendar
-gmail_service, calendar_service, sheets_service = authenticate_google_services()
-print("\tGOOGLE AUTHENITICATED\n\n")
+# # In[ ]:
 
 
-# In[ ]:
+# #- Get access to gmail and calendar
+# gmail_service, calendar_service, sheets_service = authenticate_google_services()
+# print("\tGOOGLE AUTHENITICATED\n\n")
 
 
-#- Get job offers from emails
-num_days = 0.1
-num_hours = num_days * 24
-max_emails = 10000
-# max_emails = 1
-emails = fetch_recent_emails(gmail_service, time_delta_hours=num_hours,max_results=max_emails)
-print(f"\t{len(emails)} EMAILS RETRIEVED\n\n")
+# # In[ ]:
 
 
-# In[ ]:
+# #- Get job offers from emails
+# num_days = 0.1
+# num_hours = num_days * 24
+# max_emails = 10000
+# # max_emails = 1
+# emails = fetch_recent_emails(gmail_service, time_delta_hours=num_hours,max_results=max_emails)
+# print(f"\t{len(emails)} EMAILS RETRIEVED\n\n")
 
 
-print(emails[0])
+# # In[ ]:
 
 
-# In[ ]:
+# print(emails[0])
 
 
-#- Pass the emails to GPT to extract job information
-job_offers = process_emails_for_jobs(emails)
-print(f"\t{len(job_offers)} JOB OFFERS EXTRACTED\n\n")
+# # In[ ]:
 
 
-# In[ ]:
+# #- Pass the emails to GPT to extract job information
+# job_offers = process_emails_for_jobs(emails)
+# print(f"\t{len(job_offers)} JOB OFFERS EXTRACTED\n\n")
 
 
-for job in job_offers:
-#     print(json.dumps(job,indent=4))
-    print(job)
+# # In[ ]:
 
 
-# In[ ]:
+# for job in job_offers:
+# #     print(json.dumps(job,indent=4))
+#     print(job)
 
 
-#- Create calendar entries for each job 
-SHUTS_CALENDAR_ID=os.getenv("SHUTS_CALENDAR_ID")
-print("SHUTS_CALENDAR_ID", SHUTS_CALENDAR_ID)
-# Optionally clear the calendar of all entries for testing
-#     clear_calendar(calendar_service)
+# # In[ ]:
 
 
-# In[ ]:
+# #- Create calendar entries for each job 
+# SHUTS_CALENDAR_ID=os.getenv("SHUTS_CALENDAR_ID")
+# print("SHUTS_CALENDAR_ID", SHUTS_CALENDAR_ID)
+# # Optionally clear the calendar of all entries for testing
+# #     clear_calendar(calendar_service)
 
 
-gmail_service, calendar_service, sheets_service = authenticate_google_services()
-clear_calendar(calendar_service)
+# # In[ ]:
 
 
-# In[ ]:
+# gmail_service, calendar_service, sheets_service = authenticate_google_services()
+# clear_calendar(calendar_service)
 
 
-add_jobs_to_calendar(job_offers,calendar_service)
-print("CALENDAR ENTRIES ADDED\n\n")
+# # In[ ]:
 
 
-# In[ ]:
+# add_jobs_to_calendar(job_offers,calendar_service)
+# print("CALENDAR ENTRIES ADDED\n\n")
 
 
-job = job_offers[0]
-
-# print(job)
-print(job['end_date'])
-
-# Add 1 day to the end date, as event ends at 00:00 of the end date
-end_date_obj = datetime.strptime(job['end_date'], "%Y-%m-%d").date() + timedelta(days=1)
-end_date = end_date_obj.strftime("%Y-%m-%d")  # convert back to string
-
-print(end_date)
+# # In[ ]:
 
 
-# In[ ]:
+# job = job_offers[0]
+
+# # print(job)
+# print(job['end_date'])
+
+# # Add 1 day to the end date, as event ends at 00:00 of the end date
+# end_date_obj = datetime.strptime(job['end_date'], "%Y-%m-%d").date() + timedelta(days=1)
+# end_date = end_date_obj.strftime("%Y-%m-%d")  # convert back to string
+
+# print(end_date)
 
 
-clear_calendar(calendar_service)
+# # In[ ]:
 
 
-# In[ ]:
+# clear_calendar(calendar_service)
 
 
-job_offers_test = []
-job_offers_test.append(job_offers[0])
-
-job_offers_test[0]['start_date'] = "2025-08-04"
-# print(job_offers_test[0]['start_date'])
-
-job_offers_test[0]['end_date'] = "2025-08-05"
-# print(job_offers_test[0]['end_date'])
-# # print(job_offers_test)
+# # In[ ]:
 
 
-# In[ ]:
+# job_offers_test = []
+# job_offers_test.append(job_offers[0])
+
+# job_offers_test[0]['start_date'] = "2025-08-04"
+# # print(job_offers_test[0]['start_date'])
+
+# job_offers_test[0]['end_date'] = "2025-08-05"
+# # print(job_offers_test[0]['end_date'])
+# # # print(job_offers_test)
 
 
-add_jobs_to_calendar(job_offers_test,calendar_service)
-print("CALENDAR ENTRIES ADDED\n\n")
+# # In[ ]:
 
 
-# In[ ]:
+# add_jobs_to_calendar(job_offers_test,calendar_service)
+# print("CALENDAR ENTRIES ADDED\n\n")
 
 
-# Extract specific email for testing
-email
-for email in emails:
-    print(email['thread_id'])
-    if email['thread_id'] == "YzE4aDd0dXI5c3NndWtxN2Y4cjR2N2RpNWcgNWE0OWRiMDdmNzFkMGU5YmIwNDU3MmYzNTk2MTM4ZDUxYWE5NDg1Y2ExYjg2ZTg4NDQzYTkwNDJmOGEyMWU5ZUBn":
-        print(email)
-        email_test = email
-        pass
-# print(email_test)
+# # In[ ]:
+
+
+# # Extract specific email for testing
+# email
+# for email in emails:
+#     print(email['thread_id'])
+#     if email['thread_id'] == "YzE4aDd0dXI5c3NndWtxN2Y4cjR2N2RpNWcgNWE0OWRiMDdmNzFkMGU5YmIwNDU3MmYzNTk2MTM4ZDUxYWE5NDg1Y2ExYjg2ZTg4NDQzYTkwNDJmOGEyMWU5ZUBn":
+#         print(email)
+#         email_test = email
+#         pass
+# # print(email_test)
 
