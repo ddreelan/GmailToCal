@@ -1126,20 +1126,23 @@ def main():
     gmail_service, calendar_service, sheets_service = authenticate_google_services()
     print("\tGOOGLE AUTHENITICATED\n\n")
     
-    #- Get job offers from emails
-    num_days = 7
-    num_hours = num_days * 24
-    max_emails = 10000
-    emails = fetch_recent_emails(gmail_service, time_delta_hours=num_hours,max_results=max_emails)
-    print(f"\t{len(emails)} EMAILS RETRIEVED\n\n")
 
-    #- Pass the emails to GPT to extract job information
-    job_offers = process_emails_for_jobs(emails)
-    print(f"\t{len(job_offers)} JOB OFFERS EXTRACTED\n\n")
-    
-    #- Create calendar entries for each job 
     SHUTS_CALENDAR_ID=os.getenv("SHUTS_CALENDAR_ID")
     print("SHUTS_CALENDAR_ID", SHUTS_CALENDAR_ID)
+    # #- Get job offers from emails
+    # num_days = 7
+    # num_hours = num_days * 24
+    # max_emails = 10000
+    # emails = fetch_recent_emails(gmail_service, time_delta_hours=num_hours,max_results=max_emails)
+    # print(f"\t{len(emails)} EMAILS RETRIEVED\n\n")
+
+    # #- Pass the emails to GPT to extract job information
+    # job_offers = process_emails_for_jobs(emails)
+    # print(f"\t{len(job_offers)} JOB OFFERS EXTRACTED\n\n")
+    
+    # #- Create calendar entries for each job 
+    # SHUTS_CALENDAR_ID=os.getenv("SHUTS_CALENDAR_ID")
+    # print("SHUTS_CALENDAR_ID", SHUTS_CALENDAR_ID)
     
 
 #     # Optionally clear the calendar of all entries for testing
