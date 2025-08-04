@@ -1140,14 +1140,16 @@ def main():
     #- Create calendar entries for each job 
     SHUTS_CALENDAR_ID=os.getenv("SHUTS_CALENDAR_ID")
     print("SHUTS_CALENDAR_ID", SHUTS_CALENDAR_ID)
-    # Optionally clear the calendar of all entries for testing
-#     clear_calendar(calendar_service)
-    add_jobs_to_calendar(job_offers,calendar_service)
-    print("CALENDAR ENTRIES ADDED\n\n")
     
-    #- Add jobs to a Google Sheet spreadsheet
-    SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
-    add_jobs_to_sheet(job_offers, sheets_service, SPREADSHEET_ID, sheet_name="Jobs")
+
+#     # Optionally clear the calendar of all entries for testing
+# #     clear_calendar(calendar_service)
+#     add_jobs_to_calendar(job_offers,calendar_service)
+#     print("CALENDAR ENTRIES ADDED\n\n")
+    
+#     #- Add jobs to a Google Sheet spreadsheet
+#     SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+#     add_jobs_to_sheet(job_offers, sheets_service, SPREADSHEET_ID, sheet_name="Jobs")
     
     pass
 
