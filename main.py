@@ -372,7 +372,7 @@ def fetch_recent_emails(gmail_service, time_delta_hours=1000, max_results=1000):
     # Filter the emails being searched. Doing this general filter is much more efficient than a GPT
     query = (
         f"after:{after_timestamp} "
-        + '(job OR shutdown OR shutdowns OR fitter OR fitters OR fifo OR shut OR shuts)'
+        + '(job OR shutdown OR shutdowns OR fitter OR fitters OR fifo OR shut OR shuts OR work OR works)'
     )
     
 
@@ -581,6 +581,8 @@ Only return a result if the email includes **at least one** of the following:
 
 > ⚠️ *Ignore jobs without a start date and an end date.*
 
+> ⚠️ *Ignore emails about mobilisation for a job I am already confirmed for.*
+
 ---
 
 ### 📦 Data to Extract (All as Lists)
@@ -599,7 +601,6 @@ Duplicate or align values across fields as needed. Use **dummy values** if speci
 | `clean_shaven`     | `true` if clean-shaven requirement is mentioned, otherwise `false`               |
 | `client_name`      | Derived from sender’s domain (e.g., `downergroup.com.au` → `downergroup`)        |
 | `contact_number`   | Digits only (no spaces or symbols). If more than one is present, use the mobile. |
-| `email_address`    | Valid contact email(s) from the thread                                           |
 
 ---
 
@@ -618,8 +619,7 @@ Return the following JSON object, with **all keys present**, even if empty:
   "position": [],
   "clean_shaven": [],
   "client_name": [],
-  "contact_number": [],
-  "email_address": []
+  "contact_number": []
 }}
 ```
 
@@ -712,7 +712,7 @@ def process_emails_for_jobs(emails):
             try:
                 required_keys = ['workplace', 'start_date',
                                  'end_date', 'day_shift_rate', 'night_shift_rate', 'position',
-                                 'clean_shaven', 'client_name', 'contact_number', 'email_address']
+                                 'clean_shaven', 'client_name', 'contact_number']
 
                 # Check key presence
                 if not all(key in parsed for key in required_keys):
@@ -858,27 +858,46 @@ def is_calendar_free(calendar_service, calendar_id, start_date_str, end_date_str
 # In[ ]:
 
 
+def safe_format_rate(value):
+    """Convert value to float and format to 2 decimal places, or return N/A."""
+    try:
+        if value is None:
+            return "N/A"
+        return f"{float(value):.2f}"
+    except (ValueError, TypeError):
+        return "N/A"
+
 def add_jobs_to_calendar(job_offers, calendar_service, calendar_id=os.getenv("SHUTS_CALENDAR_ID")):
     for job in job_offers:
-        summary = f"{job['workplace']} | ${job['day_shift_rate']} DS / ${job['night_shift_rate']} NS | {job['client_name']}"
+        day_rate = safe_format_rate(job.get('day_shift_rate'))
+        night_rate = safe_format_rate(job.get('night_shift_rate'))
+
+        summary = f"{job['workplace']} | ${day_rate} DS / ${night_rate} NS | {job['client_name']}"
+
         start_date = job['start_date']
         
-        print("end date before addition:",job['end_date'])
-        # Add 1 day to the end date, as event ends at 00:00 of the end date
+        # Add 1 day to the end date
         end_date_obj = datetime.strptime(job['end_date'], "%Y-%m-%d").date() + timedelta(days=1)
-        end_date = end_date_obj.strftime("%Y-%m-%d")  # convert back to string
-        print("end date AFTER addition:",end_date)
+        end_date = end_date_obj.strftime("%Y-%m-%d")
+
         # To search for the email on that specific day, I need to search from the day before until the day after
         # First, parse the string into a datetime object
         received_str = job['received_datetime'].rsplit(' ', 1)[0]  # removes ' AWST'
         received_dt = datetime.strptime(received_str, "%Y-%m-%d %H:%M:%S")
         
         # Check if I am free for those dates
-        event_colour = "5" # Set banana as default
+        event_colour = calendar_service.calendarList().get(calendarId=calendar_id).execute().get("colorId")
+        event_transparency = "transparent"
+        # Check if I am free on my primary calendar
         if(is_calendar_free(calendar_service,"primary",start_date,end_date)):
+            print(f"Calendar is free from {start_date} to {end_date} for job: {summary}")
             event_colour = "2" # Sage (light green)
+            event_transparency = "opaque"
         else:
-            event_colour = "4" # Flamingo (light red)
+            event_colour = "5" # Banana (yellow)
+            event_transparency = "transparent"
+            print(f"Calendar is NOT free from {start_date} to {end_date} for job: {summary}")
+
 
         # Then get the date and apply timedelta
         search_start_date = received_dt.date() - timedelta(days=1)
@@ -895,8 +914,8 @@ Link to email (only works for desktop): {job['email_thread_link']}
 
 Client: {job['client_name']}
 Site: {job['workplace']}
-Day Shift Rate: {job['day_shift_rate']} /hr
-Night Shift Rate: {job['night_shift_rate']} /hr
+Day Shift Rate: {day_rate} /hr
+Night Shift Rate: {night_rate} /hr
 
 Position: {job['position']}
 Clean Shaven: {job['clean_shaven']}
@@ -914,7 +933,9 @@ Phone: {job['contact_number']}
             },
             'event_type': 'workingLocation',
             'location': f"{job['workplace']}",
-            'colorId': event_colour
+            'colorId': event_colour,
+#             'transparency': event_transparency
+            "transparency": "transparent"
         }
 
         try:
@@ -1126,33 +1147,28 @@ def main():
     gmail_service, calendar_service, sheets_service = authenticate_google_services()
     print("\tGOOGLE AUTHENITICATED\n\n")
     
+    #- Get job offers from emails
+    num_days = 1
+    num_hours = num_days * 24
+    max_emails = 10000
+    emails = fetch_recent_emails(gmail_service, time_delta_hours=num_hours,max_results=max_emails)
+    print(f"\t{len(emails)} EMAILS RETRIEVED\n\n")
 
+    #- Pass the emails to GPT to extract job information
+    job_offers = process_emails_for_jobs(emails)
+    print(f"\t{len(job_offers)} JOB OFFERS EXTRACTED\n\n")
+    
+    #- Create calendar entries for each job 
     SHUTS_CALENDAR_ID=os.getenv("SHUTS_CALENDAR_ID")
-    print("SHUTS_CALENDAR_ID", SHUTS_CALENDAR_ID)
-    # #- Get job offers from emails
-    # num_days = 7
-    # num_hours = num_days * 24
-    # max_emails = 10000
-    # emails = fetch_recent_emails(gmail_service, time_delta_hours=num_hours,max_results=max_emails)
-    # print(f"\t{len(emails)} EMAILS RETRIEVED\n\n")
-
-    # #- Pass the emails to GPT to extract job information
-    # job_offers = process_emails_for_jobs(emails)
-    # print(f"\t{len(job_offers)} JOB OFFERS EXTRACTED\n\n")
+#     print("SHUTS_CALENDAR_ID", SHUTS_CALENDAR_ID)
+    # Optionally clear the calendar of all entries for testing
+#     clear_calendar(calendar_service)
+    add_jobs_to_calendar(job_offers,calendar_service)
+    print("CALENDAR ENTRIES ADDED\n\n")
     
-    # #- Create calendar entries for each job 
-    # SHUTS_CALENDAR_ID=os.getenv("SHUTS_CALENDAR_ID")
-    # print("SHUTS_CALENDAR_ID", SHUTS_CALENDAR_ID)
-    
-
-#     # Optionally clear the calendar of all entries for testing
-# #     clear_calendar(calendar_service)
-#     add_jobs_to_calendar(job_offers,calendar_service)
-#     print("CALENDAR ENTRIES ADDED\n\n")
-    
-#     #- Add jobs to a Google Sheet spreadsheet
-#     SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
-#     add_jobs_to_sheet(job_offers, sheets_service, SPREADSHEET_ID, sheet_name="Jobs")
+    #- Add jobs to a Google Sheet spreadsheet
+    SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+    add_jobs_to_sheet(job_offers, sheets_service, SPREADSHEET_ID, sheet_name="Jobs")
     
     pass
 
@@ -1160,9 +1176,9 @@ if __name__ == "__main__":
     main()
 
 
-# # # Testing
+# # Testing
 
-# # In[ ]:
+# In[ ]:
 
 
 # #- Get access to gmail and calendar
@@ -1185,7 +1201,14 @@ if __name__ == "__main__":
 # # In[ ]:
 
 
-# print(emails[0])
+# print(emails[1]['sender'])
+
+
+# # In[ ]:
+
+
+# emails_test = []
+# emails_test.append(emails[5])
 
 
 # # In[ ]:
@@ -1224,6 +1247,7 @@ if __name__ == "__main__":
 # # In[ ]:
 
 
+# clear_calendar(calendar_service)
 # add_jobs_to_calendar(job_offers,calendar_service)
 # print("CALENDAR ENTRIES ADDED\n\n")
 
