@@ -9,7 +9,8 @@ on:
 env:
   GMAIL_API_TOKEN_BASE64: ${{ secrets.GMAIL_API_TOKEN_BASE64 }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-  CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
+  SHUTS_CALENDAR_ID: ${{ secrets.SHUTS_CALENDAR_ID }}
+  SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
 
 jobs:
   run-script:
