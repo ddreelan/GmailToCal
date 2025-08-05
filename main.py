@@ -20,17 +20,21 @@
 # 
 # 4. **Extract Structured Job Info**
 #    Parses the email content to pull out key information such as:
-# 
 #    * Worksite / Company
 #    * Start and end dates
 #    * Pay rates
 #    * Clean shaven policies at the worksite
+#    
+#    
 # 
 # 5. **Store Valid Job Offers**
 #    Compiles confirmed job offers into a structured list for easy tracking and debugging.
 # 
 # 6. **Add Jobs to Google Calendar**
 #    Automatically inserts valid job offers as calendar events with all relevant details.
+#    
+# 7. **Add Jobs to Google Sheets spreadsheet**
+#    Record all job offers in a spreadsheet for real time and future data analysis.
 # 
 # ---
 
@@ -174,23 +178,6 @@
 # In[ ]:
 
 
-from dotenv import load_dotenv
-load_dotenv()
-import os
-
-GMAIL_API_TOKEN_BASE64 = os.getenv("GMAIL_API_TOKEN_BASE64")
-
-
-# In[ ]:
-
-
-# !python -m pip install --upgrade pip
-# !pip install -r requirements.txt
-
-
-# In[ ]:
-
-
 import os
 import base64
 import json
@@ -280,7 +267,7 @@ def authenticate_google_services(scopes=SCOPES, token_file=token_file_name, cred
 # ### 🔍 Email Filtering and Query
 # 
 # We use the Gmail API to search for emails received in the past `X` hours using job-specific keywords such as:
-# - `job`, `shutdown`, `fitter`, `fifo`, `shut`, etc.
+# - `job`, `shutdown`, `fitter`, `fifo`, `shut`, `work` etc.
 # 
 # This is done through a **Gmail search query**, making the process efficient and focused on relevant content.
 # 
@@ -415,7 +402,7 @@ def fetch_recent_emails(gmail_service, time_delta_hours=1000, max_results=1000):
 
 
 # # Step 4: Use OpenAI GPT to extract the job details
-
+# 
 # ---
 # 
 # ## 🔑 How to Get Your `OPENAI_API_KEY`
@@ -627,45 +614,6 @@ Return the following JSON object, with **all keys present**, even if empty:
 
 ---
 """
-# PROMPT_INSTRUCTIONS = f"""
-# You are an expert assistant for detecting job opportunities for **mechanical fitters** or **riggers** in **mining shutdowns** in Australia.
-
-# Analyze the full email thread content and return a structured JSON object **only if** there is a genuine and current work opportunity. Otherwise, return `"is_work_opportunity": false` and leave all other fields as empty lists.
-
-# ## Relevance Criteria
-# Only return a result if the email includes one of:
-# - A job ad, invitation to apply, or request for availability
-# - Shutdown schedule confirmation or a start/end date
-# - (Ignore rosters)
-
-# ## Extraction Fields (all as **lists**):
-# - `workplace`: Names of mines/sites.
-# - `start_date`, `end_date`: Format as `YYYY-MM-DD`. Today is {current_date}.
-# - `day_shift_rate`, `night_shift_rate`: Float values (e.g., 655.00).
-# - `position`: "Fitter" or "Rigger".
-# - `clean_shaven`: True or False.
-# - `client_name`: Extract from sender's domain; take only the first part (e.g., from `downergroup.com.au` → `downergroup`).
-# - `contact_number`: Digits only, no spaces.
-# - `email_address`: Valid contact emails.
-
-# > Ensure all lists are the same length. Duplicate or align entries as needed. Use dummy values if specific details are missing.
-
-# ## Output Format
-# Return the following JSON object with **all keys present**, even if values are empty:
-# {{
-#   "is_work_opportunity": true,
-#   "workplace": [...],
-#   "start_date": [...],
-#   "end_date": [...],
-#   "day_shift_rate": [...],
-#   "night_shift_rate": [...],
-#   "position": [...],
-#   "clean_shaven": [...],
-#   "client_name": [...],
-#   "contact_number": [...],
-#   "email_address": [...]
-# }}
-# """
 
 
 # In[ ]:
@@ -765,7 +713,117 @@ def process_emails_for_jobs(emails):
     return job_offers
 
 
-# ## Step 6: Add entries to Google calendar
+# ---
+# 
+# # Step 6: Manage Your Google Calendar for Job Scheduling
+# 
+# ---
+# 
+# ## 🔑 How to Use the Google Calendar Helper Functions
+# 
+# These helper functions let you:
+# 
+# * List all your calendars
+# * Clear all events from a calendar
+# * Check if you’re free on certain dates
+# * Safely format pay rates
+# * Add job offers to your calendar with colour coding
+# 
+# ---
+# 
+# ### **List All Your Google Calendars**
+# 
+# Use this to see all the calendars linked to your Google account and get their IDs.
+# 
+# ```python
+# list_google_calendars(calendar_service)
+# ```
+# 
+# **Example output:**
+# 
+# ```
+# Primary Calendar  : primary
+# Shutdowns         : your_calendar_id@group.calendar.google.com
+# ```
+# 
+# ---
+# 
+# ### **Clear All Events from a Calendar**
+# 
+# ⚠️ **Warning:** This deletes all events in the selected calendar permanently.
+# 
+# ```python
+# clear_calendar(calendar_service, "primary")
+# ```
+# 
+# This will:
+# 
+# * Retrieve all events from the specified calendar
+# * Delete them one by one until the calendar is empty
+# 
+# ---
+# 
+# ### **Check if a Calendar is Free**
+# 
+# Check if your calendar is free between two dates. This can be used to check colour-code or automate replys to jobs periods if they are free in your primary calendar.
+# 
+# ```python
+# is_free = is_calendar_free(calendar_service, "primary", "2025-08-05", "2025-08-10")
+# print(is_free)
+# ```
+# 
+# Returns:
+# 
+# * `True` → No events in that time range
+# * `False` → At least one event exists in that time range
+# 
+# ---
+# 
+# ### **Safely Format Pay Rates**
+# 
+# Formats rates to **two decimal places** or returns `"N/A"` if missing.
+# 
+# ```python
+# safe_format_rate(65)       # '65.00'
+# safe_format_rate("72.5")   # '72.50'
+# safe_format_rate(None)     # 'N/A'
+# ```
+# 
+# ---
+# 
+# ### **Add Job Offers to Calendar**
+# 
+# Adds jobs to your calendar, automatically checking if you’re free and setting the event colour:
+# 
+# ```python
+# add_jobs_to_calendar(job_offers, calendar_service)
+# ```
+# 
+# Behaviour:
+# 
+# * If **free** → Event colour = green (`colorId="2"`)
+# * If **busy** → Event colour = yellow (`colorId="5"`)
+# * Automatically skips duplicate events
+# * Includes all job details in the description
+# 
+# ---
+# 
+# ### 📌 Where to Store Your `SHUTS_CALENDAR_ID`
+# 
+# In your `.env` file:
+# 
+# ```env
+# SHUTS_CALENDAR_ID=your_calendar_id@group.calendar.google.com
+# ```
+# 
+# Or as a GitHub Secret:
+# 
+# 1. Go to **Repo Settings → Secrets and variables → Actions**
+# 2. Click **New repository secret**
+# 3. Name it `SHUTS_CALENDAR_ID`
+# 4. Paste your calendar ID
+# 
+# ---
 
 # In[ ]:
 
@@ -777,10 +835,6 @@ def list_google_calendars(calendar_service):
     for cal in calendars:
         print(f"{cal.get('summary')}\t: {cal.get('id')}")
 # list_google_calendars(calendar_service)
-
-
-# In[ ]:
-
 
 def clear_calendar(calendar_service, calendar_id=os.getenv("SHUTS_CALENDAR_ID")):
     page_token = None
@@ -810,10 +864,6 @@ def clear_calendar(calendar_service, calendar_id=os.getenv("SHUTS_CALENDAR_ID"))
         page_token = events.get('nextPageToken')
         if not page_token:
             break
-
-
-# In[ ]:
-
 
 from datetime import datetime, timedelta
 
@@ -853,10 +903,6 @@ def is_calendar_free(calendar_service, calendar_id, start_date_str, end_date_str
     except Exception as e:
         print(f"[ERROR] Failed to check calendar availability: {e}")
         return False
-
-
-# In[ ]:
-
 
 def safe_format_rate(value):
     """Convert value to float and format to 2 decimal places, or return N/A."""
@@ -960,7 +1006,130 @@ Phone: {job['contact_number']}
             print("Failed to add calendar entry:", e)
 
 
-# ## Step 7: Add jobs to Google sheet
+# ---
+# 
+# # Step 7: Manage Your Google Sheet for Job Tracking
+# 
+# ---
+# 
+# ## 🔑 How to Use the Google Sheets Helper Functions
+# 
+# These helper functions let you:
+# 
+# * Create (or re-initialise) a sheet tab with headers
+# * Check if your sheet is empty
+# * Append job offers into the sheet
+# 
+# ---
+# 
+# ### 1. **Set Your Sheet Name and Spreadsheet ID**
+# 
+# In your `.env` file (or GitHub Secrets), store the Spreadsheet ID of your Google Sheet:
+# 
+# ```env
+# SPREADSHEET_ID=your_spreadsheet_id_here
+# ```
+# 
+# The **Spreadsheet ID** is the long string in your Google Sheets URL:
+# 
+# ```
+# https://docs.google.com/spreadsheets/d/<THIS_PART>/edit
+# ```
+# 
+# Example:
+# 
+# ```
+# https://docs.google.com/spreadsheets/d/1L_iPxjUOGoms_rIemJDOZCWK_EhBQHKEKsJn3dI5bH0/edit
+# SPREADSHEET_ID=1L_iPxjUOGoms_rIemJDOZCWK_EhBQHKEKsJn3dI5bH0
+# ```
+# 
+# ---
+# 
+# ### 2. **Initialise Your Sheet with Headers**
+# 
+# This will:
+# 
+# 1. Create the **Jobs** tab if it doesn’t already exist
+# 2. Clear any existing values
+# 3. Write a fresh header row
+# 
+# ```python
+# initialise_spreadsheet(sheets_service, spreadsheet_id=SPREADSHEET_ID)
+# ```
+# 
+# Example headers:
+# 
+# ```
+# Workplace | Start Date | End Date | Day Shift Rate | Night Shift Rate | Position | Clean Shaven | Client Name | Contact Number | Email Address | Email Subject | Thread ID | Email Thread Link | Received DateTime
+# ```
+# 
+# After running, you’ll see a confirmation link to your sheet.
+# 
+# ---
+# 
+# ### 3. **Check if Your Sheet is Empty**
+# 
+# Before writing data, you may want to check if the sheet is empty:
+# 
+# ```python
+# is_empty = is_sheet_empty(sheets_service, SPREADSHEET_ID, "Jobs")
+# print(is_empty)  # True or False
+# ```
+# 
+# ---
+# 
+# ### 4. **Add Jobs to Your Google Sheet**
+# 
+# This will:
+# 
+# * Automatically initialise the sheet if it’s empty
+# * Append each job as a new row under the headers
+# 
+# ```python
+# add_jobs_to_sheet(job_offers, sheets_service, SPREADSHEET_ID)
+# ```
+# 
+# Example `job_offers` format:
+# 
+# ```python
+# job_offers = [
+#     {
+#         "workplace": "FMG Cloudbreak",
+#         "start_date": "2025-08-10",
+#         "end_date": "2025-08-15",
+#         "day_shift_rate": 65.00,
+#         "night_shift_rate": 72.50,
+#         "position": "Fitter",
+#         "clean_shaven": True,
+#         "client_name": "downergroup",
+#         "contact_number": "0412345678",
+#         "email_address": "jobs@downergroup.com",
+#         "email_subject": "Urgent shutdown work",
+#         "thread_id": "abc123",
+#         "email_thread_link": "https://mail.google.com/mail/u/0/#thread-f:abc123",
+#         "received_datetime": "2025-08-05 09:32:00"
+#     }
+# ]
+# ```
+# 
+# ---
+# 
+# ### 📌 Where to Store `SPREADSHEET_ID`
+# 
+# In `.env` file:
+# 
+# ```env
+# SPREADSHEET_ID=your_spreadsheet_id_here
+# ```
+# 
+# Or in GitHub Actions Secrets:
+# 
+# 1. Go to **Repo Settings → Secrets and variables → Actions**
+# 2. Click **New repository secret**
+# 3. Name it `SPREADSHEET_ID`
+# 4. Paste your spreadsheet ID
+# 
+# ---
 
 # In[ ]:
 
@@ -1055,10 +1224,6 @@ def is_sheet_empty(sheets_service, spreadsheet_id, sheet_name):
         print(f"[ERROR] Failed to check if sheet is empty: {e}")
         return False
 
-
-# In[ ]:
-
-
 def add_jobs_to_sheet(job_offers, sheets_service, spreadsheet_id, sheet_name="Jobs"):
     """
     Append job offers to a Google Sheet.
@@ -1131,13 +1296,156 @@ def add_jobs_to_sheet(job_offers, sheets_service, spreadsheet_id, sheet_name="Jo
 # add_jobs_to_sheet(job_offers, sheets_service, SPREADSHEET_ID, sheet_name="Jobs")
 
 
-# # Main
-# This is the function that is run online by scheduling.
+# ---
 # 
-# To make this function runable, run the following command:
+# # Run the Main Job Extraction Pipeline
+# 
+# ---
+# 
+# ## 🚀 What the `main()` Function Does
+# 
+# This is your **end-to-end** automation pipeline:
+# 
+# 1. **Authenticate** with Gmail, Google Calendar, and Google Sheets
+# 2. **Fetch recent emails** from your inbox
+# 3. **Extract job offers** using GPT
+# 4. **Add job entries** to your Google Calendar
+# 5. **Save job details** to a Google Sheet
+# 
+# ---
+# 
+# ### 1️⃣ Authenticate Google Services
+# 
+# The script first authenticates with:
+# 
+# * **Gmail API** – for reading emails
+# * **Google Calendar API** – for creating job events
+# * **Google Sheets API** – for storing job details
+# 
+# ```python
+# gmail_service, calendar_service, sheets_service = authenticate_google_services()
+# ```
+# 
+# You’ll see:
+# 
+# ```
+# GOOGLE AUTHENTICATED
+# ```
+# 
+# ---
+# 
+# ### 2️⃣ Fetch Recent Emails
+# 
+# Set how far back you want to search:
+# 
+# ```python
+# num_days = 1
+# num_hours = num_days * 24
+# max_emails = 10000
+# emails = fetch_recent_emails(
+#     gmail_service,
+#     time_delta_hours=num_hours,
+#     max_results=max_emails
+# )
+# ```
+# 
+# Output example:
+# 
+# ```
+# 127 EMAILS RETRIEVED
+# ```
+# 
+# ---
+# 
+# ### 3️⃣ Extract Job Offers with GPT
+# 
+# The raw emails are sent to the GPT-powered parser:
+# 
+# ```python
+# job_offers = process_emails_for_jobs(emails)
+# ```
+# 
+# It filters out irrelevant messages and only returns **genuine job opportunities**.
+# 
+# Example:
+# 
+# ```
+# 3 JOB OFFERS EXTRACTED
+# ```
+# 
+# ---
+# 
+# ### 4️⃣ Add Jobs to Google Calendar
+# 
+# Jobs are inserted into your shutdown jobs calendar:
+# 
+# ```python
+# add_jobs_to_calendar(job_offers, calendar_service)
+# ```
+# 
+# Each entry includes:
+# 
+# * Site name
+# * Pay rates
+# * Dates
+# * Gmail search link for the original email
+# 
+# Output:
+# 
+# ```
+# CALENDAR ENTRIES ADDED
+# ```
+# 
+# > 💡 Calendar ID is read from:
+# 
+# ```env
+# SHUTS_CALENDAR_ID=your_calendar_id_here
+# ```
+# 
+# ---
+# 
+# ### 5️⃣ Save Jobs to Google Sheets
+# 
+# Jobs are appended to your spreadsheet:
+# 
+# ```python
+# SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+# add_jobs_to_sheet(job_offers, sheets_service, SPREADSHEET_ID, sheet_name="Jobs")
+# ```
+# 
+# Output:
+# 
+# ```
+# 5 rows added to Google Sheet.
+# ```
+# 
+# > 💡 Spreadsheet ID is read from:
+# 
+# ```env
+# SPREADSHEET_ID=your_spreadsheet_id_here
+# ```
+# 
+# ---
+# 
+# ### 🖥️ Running the Script
+# 
+# To make this notebook runable, run the following command:
 # ```bash
 # jupyter nbconvert --to script GmailToCalendar.ipynb --output main
 # ```
+# 
+# Run locally:
+# 
+# ```bash
+# python main.py
+# ```
+# 
+# Run in GitHub Actions (automated daily):
+# 
+# * Make sure your `.env` variables are set in **GitHub Secrets**
+# * Workflow will run the `main()` function automatically
+# 
+# ---
 
 # In[ ]:
 
@@ -1174,136 +1482,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# # Testing
-
-# In[ ]:
-
-
-# #- Get access to gmail and calendar
-# gmail_service, calendar_service, sheets_service = authenticate_google_services()
-# print("\tGOOGLE AUTHENITICATED\n\n")
-
-
-# # In[ ]:
-
-
-# #- Get job offers from emails
-# num_days = 0.1
-# num_hours = num_days * 24
-# max_emails = 10000
-# # max_emails = 1
-# emails = fetch_recent_emails(gmail_service, time_delta_hours=num_hours,max_results=max_emails)
-# print(f"\t{len(emails)} EMAILS RETRIEVED\n\n")
-
-
-# # In[ ]:
-
-
-# print(emails[1]['sender'])
-
-
-# # In[ ]:
-
-
-# emails_test = []
-# emails_test.append(emails[5])
-
-
-# # In[ ]:
-
-
-# #- Pass the emails to GPT to extract job information
-# job_offers = process_emails_for_jobs(emails)
-# print(f"\t{len(job_offers)} JOB OFFERS EXTRACTED\n\n")
-
-
-# # In[ ]:
-
-
-# for job in job_offers:
-# #     print(json.dumps(job,indent=4))
-#     print(job)
-
-
-# # In[ ]:
-
-
-# #- Create calendar entries for each job 
-# SHUTS_CALENDAR_ID=os.getenv("SHUTS_CALENDAR_ID")
-# print("SHUTS_CALENDAR_ID", SHUTS_CALENDAR_ID)
-# # Optionally clear the calendar of all entries for testing
-# #     clear_calendar(calendar_service)
-
-
-# # In[ ]:
-
-
-# gmail_service, calendar_service, sheets_service = authenticate_google_services()
-# clear_calendar(calendar_service)
-
-
-# # In[ ]:
-
-
-# clear_calendar(calendar_service)
-# add_jobs_to_calendar(job_offers,calendar_service)
-# print("CALENDAR ENTRIES ADDED\n\n")
-
-
-# # In[ ]:
-
-
-# job = job_offers[0]
-
-# # print(job)
-# print(job['end_date'])
-
-# # Add 1 day to the end date, as event ends at 00:00 of the end date
-# end_date_obj = datetime.strptime(job['end_date'], "%Y-%m-%d").date() + timedelta(days=1)
-# end_date = end_date_obj.strftime("%Y-%m-%d")  # convert back to string
-
-# print(end_date)
-
-
-# # In[ ]:
-
-
-# clear_calendar(calendar_service)
-
-
-# # In[ ]:
-
-
-# job_offers_test = []
-# job_offers_test.append(job_offers[0])
-
-# job_offers_test[0]['start_date'] = "2025-08-04"
-# # print(job_offers_test[0]['start_date'])
-
-# job_offers_test[0]['end_date'] = "2025-08-05"
-# # print(job_offers_test[0]['end_date'])
-# # # print(job_offers_test)
-
-
-# # In[ ]:
-
-
-# add_jobs_to_calendar(job_offers_test,calendar_service)
-# print("CALENDAR ENTRIES ADDED\n\n")
-
-
-# # In[ ]:
-
-
-# # Extract specific email for testing
-# email
-# for email in emails:
-#     print(email['thread_id'])
-#     if email['thread_id'] == "YzE4aDd0dXI5c3NndWtxN2Y4cjR2N2RpNWcgNWE0OWRiMDdmNzFkMGU5YmIwNDU3MmYzNTk2MTM4ZDUxYWE5NDg1Y2ExYjg2ZTg4NDQzYTkwNDJmOGEyMWU5ZUBn":
-#         print(email)
-#         email_test = email
-#         pass
-# # print(email_test)
 
