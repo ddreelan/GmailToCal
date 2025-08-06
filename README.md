@@ -95,7 +95,7 @@ Create a GitHub secret for it:
 
 ---
 
-## 🧠 Add OpenAI for Smarter Parsing (Optional)
+## 🧠 Add OpenAI for Smarter Parsing
 
 The notebook supports GPT-powered parsing for job dates, locations, and role details.
 
